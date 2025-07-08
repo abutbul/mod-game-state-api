@@ -1,0 +1,32 @@
+#
+# Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, released under GNU AGPL v3 license: https://github.com/azerothcore/azerothcore-wotlk/blob/master/LICENSE-AGPL3
+#
+
+[worldserver]
+
+########################################
+# Game State API Module Configuration
+########################################
+#
+#    GameStateAPI.Enable
+#        Description: Enable the Game State API HTTP server
+#        Default:     0 - Disabled
+#                     1 - Enabled
+#
+#    GameStateAPI.Host
+#        Description: Host address to bind the HTTP server to
+#        Default:     "127.0.0.1"
+#
+#    GameStateAPI.Port
+#        Description: Port number for the HTTP server
+#        Default:     8080
+#
+#    GameStateAPI.AllowedOrigin
+#        Description: CORS allowed origin for web requests
+#        Default:     "*"
+#
+
+GameStateAPI.Enable = 1
+GameStateAPI.Host = "127.0.0.1"
+GameStateAPI.Port = 8080
+GameStateAPI.AllowedOrigin = "*"
