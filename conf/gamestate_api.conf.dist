@@ -27,6 +27,6 @@
 #
 
 GameStateAPI.Enable = 1
-GameStateAPI.Host = "127.0.0.1"
+GameStateAPI.Host = "0.0.0.0"
 GameStateAPI.Port = 8080
 GameStateAPI.AllowedOrigin = "*"
