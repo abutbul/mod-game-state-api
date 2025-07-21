@@ -35,6 +35,15 @@ namespace GameStateUtilities
 
     // Get player's talent specialization info
     nlohmann::json GetPlayerTalentInfo(Player* player);
+
+    // Get player's skills and talents information
+    nlohmann::json GetPlayerSkills(Player* player);
+
+    // Get player's full skills and talents information (includes passive skills)
+    nlohmann::json GetPlayerSkillsFull(Player* player);
+
+    // Get player's active quests information
+    nlohmann::json GetPlayerQuests(Player* player);
 }
 
 #endif // GAMESTATEAPI_GAMESTATESUTILITIES_H

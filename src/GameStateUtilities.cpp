@@ -15,6 +15,10 @@
 #include "GuildMgr.h"
 #include "World.h"
 #include "Group.h"
+#include "QuestDef.h"
+#include "DBCStores.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include <fmt/format.h>
 
 namespace GameStateUtilities
@@ -500,5 +504,216 @@ namespace GameStateUtilities
     {
         // Use AzerothCore's ObjectAccessor for efficient player lookup
         return ObjectAccessor::FindPlayerByName(name);
+    }
+
+    nlohmann::json GetPlayerSkills(Player* player)
+    {
+        nlohmann::json skills = nlohmann::json::object();
+
+        if (!player)
+            return skills;
+
+        // Get castable spells (non-passive spells)
+        nlohmann::json castableSpells = nlohmann::json::array();
+
+        const PlayerSpellMap& spellMap = player->GetSpellMap();
+        // Get castable spells (non-passive spells)
+        for (const auto& spellPair : spellMap)
+        {
+            uint32 spellId = spellPair.first;
+            const PlayerSpell* playerSpell = spellPair.second;
+
+            // Skip only removed spells
+            if (playerSpell->State == PLAYERSPELL_REMOVED)
+                continue;
+
+            // Get spell info
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+            if (!spellInfo)
+                continue;
+
+            // Skip passive spells - we only want castable abilities
+            if (spellInfo->IsPassive())
+                continue;
+
+            nlohmann::json spellData = {
+                {"spell_id", spellId},
+                {"name", spellInfo->SpellName[0] ? spellInfo->SpellName[0] : "Unknown"},
+                {"rank", spellInfo->Rank[0] ? spellInfo->Rank[0] : ""},
+                {"school", spellInfo->SchoolMask},
+                {"cast_time", spellInfo->CastTimeEntry ? spellInfo->CastTimeEntry->CastTime : 0},
+                {"cooldown", spellInfo->RecoveryTime},
+                {"range", spellInfo->RangeEntry ? spellInfo->RangeEntry->RangeMax[0] : 0.0f}
+            };
+
+            castableSpells.push_back(spellData);
+        }
+
+        skills["castable_spells"] = castableSpells;
+        skills["spell_count"] = castableSpells.size();
+
+        return skills;
+    }
+
+    nlohmann::json GetPlayerSkillsFull(Player* player)
+    {
+        nlohmann::json skills = nlohmann::json::object();
+
+        if (!player)
+            return skills;
+
+        // Get all learned skills (the original implementation)
+        nlohmann::json skillsArray = nlohmann::json::array();
+
+        // Iterate through all skill lines that the player has
+        for (uint32 i = 0; i < PLAYER_MAX_SKILLS; ++i)
+        {
+            uint32 skill = player->GetUInt32Value(PLAYER_SKILL_INFO_1_1 + i * 3);
+            if (skill == 0)
+                continue;
+
+            uint16 skillId = SKILL_VALUE(skill);
+            uint16 skillStep = SKILL_MAX(skill);
+
+            if (skillId == 0)
+                continue;
+
+            // Get skill values
+            uint16 skillValue = player->GetSkillValue(skillId);
+            uint16 maxSkillValue = player->GetMaxSkillValue(skillId);
+            uint16 pureSkillValue = player->GetPureSkillValue(skillId);
+            int16 permBonus = player->GetSkillPermBonusValue(skillId);
+            int16 tempBonus = player->GetSkillTempBonusValue(skillId);
+
+            nlohmann::json skillData = {
+                {"skill_id", skillId},
+                {"skill_step", skillStep},
+                {"current_value", skillValue},
+                {"max_value", maxSkillValue},
+                {"pure_value", pureSkillValue},
+                {"permanent_bonus", permBonus},
+                {"temporary_bonus", tempBonus}
+            };
+
+            // Add skill line name if available
+            if (SkillLineEntry const* skillLineEntry = sSkillLineStore.LookupEntry(skillId))
+            {
+                skillData["name"] = skillLineEntry->name[0]; // Default locale
+            }
+
+            skillsArray.push_back(skillData);
+        }
+
+        skills["passive_skills"] = skillsArray;
+
+        // Get talent information
+        nlohmann::json talentsInfo = GetPlayerTalentInfo(player);
+        skills["talents"] = talentsInfo;
+
+        // Get castable spells
+        nlohmann::json castableData = GetPlayerSkills(player);
+        skills["castable_spells"] = castableData["castable_spells"];
+        skills["spell_count"] = castableData["spell_count"];
+
+        return skills;
+    }
+
+    nlohmann::json GetPlayerQuests(Player* player)
+    {
+        nlohmann::json questsData = nlohmann::json::object();
+
+        if (!player)
+            return questsData;
+
+        nlohmann::json activeQuests = nlohmann::json::array();
+        nlohmann::json completedQuests = nlohmann::json::array();
+
+        // Get quest status map
+        QuestStatusMap& questStatusMap = player->getQuestStatusMap();
+
+        for (const auto& questStatusPair : questStatusMap)
+        {
+            uint32 questId = questStatusPair.first;
+            const QuestStatusData& questStatus = questStatusPair.second;
+
+            // Get quest template
+            Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
+            if (!quest)
+                continue;
+
+            nlohmann::json questData = {
+                {"quest_id", questId},
+                {"title", quest->GetTitle()},
+                {"description", quest->GetDetails()},
+                {"level", quest->GetQuestLevel()},
+                {"min_level", quest->GetMinLevel()},
+                {"quest_type", quest->GetType()},
+                {"suggested_players", quest->GetSuggestedPlayers()},
+                {"time_limit", quest->GetTimeAllowed()},
+                {"is_daily", quest->IsDaily()},
+                {"is_weekly", quest->IsWeekly()},
+                {"is_repeatable", quest->IsRepeatable()},
+                {"status", static_cast<uint32>(questStatus.Status)}
+            };
+
+            // Add quest objectives progress if quest is in progress
+            if (questStatus.Status == QUEST_STATUS_INCOMPLETE)
+            {
+                nlohmann::json objectives = nlohmann::json::array();
+
+                // Item objectives
+                nlohmann::json itemObjectives = nlohmann::json::array();
+                for (uint32 i = 0; i < QUEST_ITEM_OBJECTIVES_COUNT; ++i)
+                {
+                    if (quest->RequiredItemId[i] > 0)
+                    {
+                        itemObjectives.push_back({
+                            {"item_id", quest->RequiredItemId[i]},
+                            {"required_count", quest->RequiredItemCount[i]},
+                            {"current_count", questStatus.ItemCount[i]}
+                        });
+                    }
+                }
+
+                // Creature/GameObject objectives
+                nlohmann::json creatureObjectives = nlohmann::json::array();
+                for (uint32 i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
+                {
+                    if (quest->RequiredNpcOrGo[i] != 0)
+                    {
+                        creatureObjectives.push_back({
+                            {"npc_or_go_id", quest->RequiredNpcOrGo[i]},
+                            {"required_count", quest->RequiredNpcOrGoCount[i]},
+                            {"current_count", questStatus.CreatureOrGOCount[i]}
+                        });
+                    }
+                }
+
+                questData["item_objectives"] = itemObjectives;
+                questData["creature_objectives"] = creatureObjectives;
+                questData["explored"] = questStatus.Explored;
+                questData["timer"] = questStatus.Timer;
+
+                activeQuests.push_back(questData);
+            }
+            else if (questStatus.Status == QUEST_STATUS_COMPLETE)
+            {
+                // Quest is complete but not yet turned in
+                questData["ready_to_turn_in"] = true;
+                activeQuests.push_back(questData);
+            }
+            else if (questStatus.Status == QUEST_STATUS_REWARDED)
+            {
+                // Quest has been completed and turned in
+                completedQuests.push_back(questData);
+            }
+        }
+
+        questsData["active_quests"] = activeQuests;
+        questsData["completed_quests"] = completedQuests;
+        questsData["active_count"] = activeQuests.size();
+        questsData["completed_count"] = completedQuests.size();
+
+        return questsData;
     }
 }

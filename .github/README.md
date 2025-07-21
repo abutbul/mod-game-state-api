@@ -56,6 +56,192 @@ GET /api/player/{playerName}/equipment
 ```
 Returns detailed player equipment information including item stats, durability, sockets, spells, and more.
 
+---
+
+### Player Skills and Talents
+```
+GET /api/player/{playerName}/skills
+```
+Returns detailed information about a player's learned skills and talents.
+
+**Response Format:**
+```json
+{
+  "skills": [
+    {
+      "skill_id": 171,
+      "skill_step": 1,
+      "current_value": 285,
+      "max_value": 300,
+      "pure_value": 285,
+      "permanent_bonus": 0,
+      "temporary_bonus": 0,
+      "name": "Alchemy"
+    }
+    // ... more skills
+  ],
+  "talents": {
+    "active_spec": 0,
+    "specs_count": 1,
+    "talent_points": {
+      "available": 5,
+      "used": 66,
+      "total": 71
+    }
+  }
+}
+```
+
+**Skills Data Fields:**
+- `skill_id`: The unique identifier for the skill line
+- `skill_step`: The skill step/tier
+- `current_value`: Current skill value (including bonuses)
+- `max_value`: Maximum skill value for current level (including bonuses)
+- `pure_value`: Base skill value without bonuses
+- `permanent_bonus`: Permanent bonus from items/talents
+- `temporary_bonus`: Temporary bonus from buffs/effects
+- `name`: Skill line name (if available)
+
+**Talents Data Fields:**
+- `active_spec`: Currently active talent specialization
+- `specs_count`: Number of available talent specializations
+- `talent_points`: Information about talent point allocation
+
+---
+
+### Player Quests
+```
+GET /api/player/{playerName}/quests
+```
+Returns detailed information about a player's active and completed quests.
+
+**Response Format:**
+```json
+{
+  "active_quests": [
+    {
+      "quest_id": 12345,
+      "title": "The Test Quest",
+      "description": "This is a test quest description.",
+      "level": 70,
+      "min_level": 68,
+      "quest_type": 0,
+      "suggested_players": 1,
+      "time_limit": 0,
+      "is_daily": false,
+      "is_weekly": false,
+      "is_repeatable": false,
+      "status": 3,
+      "item_objectives": [
+        {
+          "item_id": 12345,
+          "required_count": 10,
+          "current_count": 7
+        }
+      ],
+      "creature_objectives": [
+        {
+          "npc_or_go_id": 25318,
+          "required_count": 8,
+          "current_count": 3
+        }
+      ],
+      "explored": false,
+      "timer": 0
+    }
+  ],
+  "completed_quests": [
+    {
+      "quest_id": 54321,
+      "title": "Completed Quest",
+      "description": "This quest has been completed.",
+      "level": 65,
+      "min_level": 60,
+      "quest_type": 0,
+      "suggested_players": 1,
+      "time_limit": 0,
+      "is_daily": true,
+      "is_weekly": false,
+      "is_repeatable": false,
+      "status": 6
+    }
+  ],
+  "active_count": 1,
+  "completed_count": 1
+}
+```
+
+**Quest Data Fields:**
+- `quest_id`: Unique quest identifier
+- `title`: Quest title
+- `description`: Quest description/details
+- `level`: Quest level
+- `min_level`: Minimum level required to take the quest
+- `quest_type`: Quest type identifier
+- `suggested_players`: Suggested number of players for the quest
+- `time_limit`: Time limit for the quest (0 = no time limit)
+- `is_daily`: Whether the quest is a daily quest
+- `is_weekly`: Whether the quest is a weekly quest
+- `is_repeatable`: Whether the quest can be repeated
+- `status`: Quest status (3 = incomplete, 1 = complete, 6 = rewarded)
+
+**Quest Objectives (for active quests only):**
+- `item_objectives`: Required items for quest completion
+- `creature_objectives`: Required creature kills or GameObject interactions
+- `explored`: Whether exploration objective is complete
+- `timer`: Current quest timer value
+
+**Quest Status Values:**
+- `0`: QUEST_STATUS_NONE
+- `1`: QUEST_STATUS_COMPLETE (ready to turn in)
+- `3`: QUEST_STATUS_INCOMPLETE (in progress)
+- `5`: QUEST_STATUS_FAILED
+- `6`: QUEST_STATUS_REWARDED (completed and turned in)
+
+---
+
+## Error Responses
+
+All endpoints return appropriate HTTP status codes and error messages:
+
+- `400 Bad Request`: When player name is missing
+- `404 Not Found`: When player is not found or not online
+- `500 Internal Server Error`: When an unexpected error occurs
+
+**Error Response Format:**
+```json
+{
+  "error": "Player not found or not online",
+  "timestamp": 1642694400
+}
+```
+
+---
+
+## Usage Examples
+
+### Get Player Skills
+```bash
+curl http://localhost:8080/api/player/PlayerName/skills
+```
+
+### Get Player Quests
+```bash
+curl http://localhost:8080/api/player/PlayerName/quests
+```
+
+---
+
+## Integration Notes
+
+- All endpoints require the player to be online
+- Player names are case-sensitive
+- The API supports CORS for web-based applications
+- All responses are in JSON format with UTF-8 encoding
+- The endpoints integrate with existing AzerothCore Player, Quest, and Skill systems
+
+---
+
 ## Example Responses
 
 ### Health Check Response
@@ -182,6 +368,134 @@ Returns detailed player equipment information including item stats, durability, 
     "away": false,
     "dnd": false
   }
+}
+```
+
+### Player Equipment Response
+```json
+{
+  "items": [
+    {
+      "id": 12345,
+      "name": "Epic Sword",
+      "type": "weapon",
+      "subtype": "sword",
+      "equip_slot": "main_hand",
+      "quality": "epic",
+      "icon": "path/to/icon.png",
+      "damage": {
+        "min": 100,
+        "max": 200
+      },
+      "speed": 2.5,
+      "stats": {
+        "strength": 10,
+        "agility": 5
+      },
+      "sockets": [
+        {
+          "type": "red",
+          "gem_id": 5678
+        }
+      ],
+      "spells": [
+        {
+          "id": 6789,
+          "name": "Flame Strike",
+          "effect": "damage",
+          "power": 50
+        }
+      ],
+      "durability": {
+        "current": 150,
+        "max": 150
+      }
+    }
+  ]
+}
+```
+
+### Player Skills and Talents Response
+```json
+{
+  "skills": [
+    {
+      "skill_id": 171,
+      "skill_step": 1,
+      "current_value": 285,
+      "max_value": 300,
+      "pure_value": 285,
+      "permanent_bonus": 0,
+      "temporary_bonus": 0,
+      "name": "Alchemy"
+    }
+    // ... more skills
+  ],
+  "talents": {
+    "active_spec": 0,
+    "specs_count": 1,
+    "talent_points": {
+      "available": 5,
+      "used": 66,
+      "total": 71
+    }
+  }
+}
+```
+
+### Player Quests Response
+```json
+{
+  "active_quests": [
+    {
+      "quest_id": 12345,
+      "title": "The Test Quest",
+      "description": "This is a test quest description.",
+      "level": 70,
+      "min_level": 68,
+      "quest_type": 0,
+      "suggested_players": 1,
+      "time_limit": 0,
+      "is_daily": false,
+      "is_weekly": false,
+      "is_repeatable": false,
+      "status": 3,
+      "item_objectives": [
+        {
+          "item_id": 12345,
+          "required_count": 10,
+          "current_count": 7
+        }
+      ],
+      "creature_objectives": [
+        {
+          "npc_or_go_id": 25318,
+          "required_count": 8,
+          "current_count": 3
+        }
+      ],
+      "explored": false,
+      "timer": 0
+    }
+  ],
+  "completed_quests": [
+    {
+      "quest_id": 54321,
+      "title": "Completed Quest",
+      "description": "This quest has been completed.",
+      "level": 65,
+      "min_level": 60,
+      "quest_type": 0,
+      "suggested_players": 1,
+      "time_limit": 0,
+      "is_daily": true,
+      "is_weekly": false,
+      "is_repeatable": false,
+      "status": 6
+    }
+  ],
+  "active_count": 1,
+  "completed_count": 1
 }
 ```
 

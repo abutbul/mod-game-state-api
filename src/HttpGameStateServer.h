@@ -28,6 +28,9 @@ private:
     void HandlePlayerInfo(const httplib::Request& req, httplib::Response& res);
     void HandlePlayerStats(const httplib::Request& req, httplib::Response& res);
     void HandlePlayerEquipment(const httplib::Request& req, httplib::Response& res);
+    void HandlePlayerSkills(const httplib::Request& req, httplib::Response& res);
+    void HandlePlayerSkillsFull(const httplib::Request& req, httplib::Response& res);
+    void HandlePlayerQuests(const httplib::Request& req, httplib::Response& res);
     void HandleServerInfo(const httplib::Request& req, httplib::Response& res);
     void HandleOnlinePlayers(const httplib::Request& req, httplib::Response& res);
     void HandleHealthCheck(const httplib::Request& req, httplib::Response& res);

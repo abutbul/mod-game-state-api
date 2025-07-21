@@ -58,6 +58,18 @@ HttpGameStateServer::HttpGameStateServer(const std::string& host, uint16 port, c
         HandlePlayerEquipment(req, res);
     });
 
+    _server->Get("/api/player/([^/]+)/skills", [this](const httplib::Request& req, httplib::Response& res) {
+        HandlePlayerSkills(req, res);
+    });
+
+    _server->Get("/api/player/([^/]+)/skills-full", [this](const httplib::Request& req, httplib::Response& res) {
+        HandlePlayerSkillsFull(req, res);
+    });
+
+    _server->Get("/api/player/([^/]+)/quests", [this](const httplib::Request& req, httplib::Response& res) {
+        HandlePlayerQuests(req, res);
+    });
+
     // Set up CORS and error handling
     _server->set_pre_routing_handler([](const httplib::Request& /*req*/, httplib::Response& res) {
         res.set_header("Access-Control-Allow-Origin", "*");
@@ -256,6 +268,69 @@ void HttpGameStateServer::HandlePlayerEquipment(const httplib::Request& req, htt
 
     json equipmentJson = GameStateUtilities::GetPlayerEquipment(player);
     SendJsonResponse(res, equipmentJson.dump());
+}
+
+void HttpGameStateServer::HandlePlayerSkills(const httplib::Request& req, httplib::Response& res)
+{
+    std::string playerName = req.matches[1];
+
+    if (playerName.empty())
+    {
+        SendErrorResponse(res, "Player name is required", 400);
+        return;
+    }
+
+    Player* player = GameStateUtilities::FindPlayerByName(playerName);
+    if (!player || !player->IsInWorld())
+    {
+        SendErrorResponse(res, "Player not found or not online", 404);
+        return;
+    }
+
+    json skillsJson = GameStateUtilities::GetPlayerSkills(player);
+    SendJsonResponse(res, skillsJson.dump());
+}
+
+void HttpGameStateServer::HandlePlayerSkillsFull(const httplib::Request& req, httplib::Response& res)
+{
+    std::string playerName = req.matches[1];
+
+    if (playerName.empty())
+    {
+        SendErrorResponse(res, "Player name is required", 400);
+        return;
+    }
+
+    Player* player = GameStateUtilities::FindPlayerByName(playerName);
+    if (!player || !player->IsInWorld())
+    {
+        SendErrorResponse(res, "Player not found or not online", 404);
+        return;
+    }
+
+    json skillsFullJson = GameStateUtilities::GetPlayerSkillsFull(player);
+    SendJsonResponse(res, skillsFullJson.dump());
+}
+
+void HttpGameStateServer::HandlePlayerQuests(const httplib::Request& req, httplib::Response& res)
+{
+    std::string playerName = req.matches[1];
+
+    if (playerName.empty())
+    {
+        SendErrorResponse(res, "Player name is required", 400);
+        return;
+    }
+
+    Player* player = GameStateUtilities::FindPlayerByName(playerName);
+    if (!player || !player->IsInWorld())
+    {
+        SendErrorResponse(res, "Player not found or not online", 404);
+        return;
+    }
+
+    json questsJson = GameStateUtilities::GetPlayerQuests(player);
+    SendJsonResponse(res, questsJson.dump());
 }
 
 void HttpGameStateServer::SetCorsHeaders(httplib::Response& res)
